@@ -4,27 +4,24 @@
 
 import json
 import numpy as np
-import os
+import logging
 import torch
 import torch.backends.cudnn
 import torch.utils.data
 
-import utils.binvox_visualization
 import utils.data_loaders
 import utils.data_transforms
-import utils.network_utils
-
-from datetime import datetime as dt
+import utils.helpers
 
 from models.encoder import Encoder
 from models.decoder import Decoder
 from models.refiner import Refiner
 from models.merger import Merger
+from utils.average_meter import AverageMeter
 
 
 def test_net(cfg,
              epoch_idx=-1,
-             output_dir=None,
              test_data_loader=None,
              test_writer=None,
              encoder=None,
@@ -56,7 +53,7 @@ def test_net(cfg,
         test_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
             utils.data_loaders.DatasetType.TEST, cfg.CONST.N_VIEWS_RENDERING, test_transforms),
                                                        batch_size=1,
-                                                       num_workers=1,
+                                                       num_workers=cfg.CONST.NUM_WORKER,
                                                        pin_memory=True,
                                                        shuffle=False)
 
@@ -73,7 +70,7 @@ def test_net(cfg,
             refiner = torch.nn.DataParallel(refiner).cuda()
             merger = torch.nn.DataParallel(merger).cuda()
 
-        print('[INFO] %s Loading weights from %s ...' % (dt.now(), cfg.CONST.WEIGHTS))
+        logging.info('Loading weights from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
         epoch_idx = checkpoint['epoch_idx']
         encoder.load_state_dict(checkpoint['encoder_state_dict'])
@@ -90,8 +87,8 @@ def test_net(cfg,
     # Testing loop
     n_samples = len(test_data_loader)
     test_iou = dict()
-    encoder_losses = utils.network_utils.AverageMeter()
-    refiner_losses = utils.network_utils.AverageMeter()
+    encoder_losses = AverageMeter()
+    refiner_losses = AverageMeter()
 
     # Switch models to evaluation mode
     encoder.eval()
@@ -105,8 +102,8 @@ def test_net(cfg,
 
         with torch.no_grad():
             # Get data from data loader
-            rendering_images = utils.network_utils.var_or_cuda(rendering_images)
-            ground_truth_volume = utils.network_utils.var_or_cuda(ground_truth_volume)
+            rendering_images = utils.helpers.var_or_cuda(rendering_images)
+            ground_truth_volume = utils.helpers.var_or_cuda(ground_truth_volume)
 
             # Test the encoder, decoder, refiner and merger
             image_features = encoder(rendering_images)
@@ -143,22 +140,19 @@ def test_net(cfg,
             test_iou[taxonomy_id]['iou'].append(sample_iou)
 
             # Append generated volumes to TensorBoard
-            if output_dir and sample_idx < 3:
-                img_dir = output_dir % 'images'
+            if test_writer and sample_idx < 3:
                 # Volume Visualization
-                gv = generated_volume.cpu().numpy()
-                rendering_views = utils.binvox_visualization.get_volume_views(gv, os.path.join(img_dir, 'test'),
-                                                                              epoch_idx)
-                test_writer.add_image('Test Sample#%02d/Volume Reconstructed' % sample_idx, rendering_views, epoch_idx)
-                gtv = ground_truth_volume.cpu().numpy()
-                rendering_views = utils.binvox_visualization.get_volume_views(gtv, os.path.join(img_dir, 'test'),
-                                                                              epoch_idx)
-                test_writer.add_image('Test Sample#%02d/Volume GroundTruth' % sample_idx, rendering_views, epoch_idx)
+                rendering_views = utils.helpers.get_volume_views(generated_volume.cpu().numpy())
+                print("lalala", rendering_views.shape)
+                test_writer.add_images('Model%02d/Reconstructed' % sample_idx, rendering_views, epoch_idx, dataformats="HWC")
+                rendering_views = utils.helpers.get_volume_views(ground_truth_volume.cpu().numpy())
+                print("lalala2", rendering_views.shape)
+                test_writer.add_images('Model%02d/GroundTruth' % sample_idx, rendering_views, epoch_idx, dataformats="HWC")
 
             # Print sample loss and IoU
-            print('[INFO] %s Test[%d/%d] Taxonomy = %s Sample = %s EDLoss = %.4f RLoss = %.4f IoU = %s' %
-                  (dt.now(), sample_idx + 1, n_samples, taxonomy_id, sample_name, encoder_loss.item(),
-                   refiner_loss.item(), ['%.4f' % si for si in sample_iou]))
+            logging.info('Test[%d/%d] Taxonomy = %s Sample = %s EDLoss = %.4f RLoss = %.4f IoU = %s' %
+                         (sample_idx + 1, n_samples, taxonomy_id, sample_name, encoder_loss.item(),
+                          refiner_loss.item(), ['%.4f' % si for si in sample_iou]))
 
     # Output testing results
     mean_iou = []
