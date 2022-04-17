@@ -2,6 +2,7 @@
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
+from ctypes import util
 import os
 import random
 import torch
@@ -180,24 +181,26 @@ def train_net(cfg):
         batch_end_time = time()
         n_batches = len(train_data_loader)
         for batch_idx, (taxonomy_names, sample_names, rendering_images,
-                        ground_truth_volumes) in enumerate(train_data_loader):
+                        ground_truth_volumes, projections_images) in enumerate(train_data_loader):
             # Measure data time
             data_time.update(time() - batch_end_time)
+
 
             # Get data from data loader
             rendering_images = utils.network_utils.var_or_cuda(rendering_images)
             ground_truth_volumes = utils.network_utils.var_or_cuda(ground_truth_volumes)
-
+            projection_images = utils.network_utils.var_or_cuda(projections_images)
             # Train the encoder, decoder, refiner, and merger
             image_features = encoder(rendering_images)
-            raw_features, generated_volumes = decoder(image_features)
+            raw_features, generated_volumes, generated_projections = decoder(image_features)
 
             if cfg.NETWORK.USE_MERGER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_MERGER:
                 generated_volumes = merger(raw_features, generated_volumes)
             else:
                 generated_volumes = torch.mean(generated_volumes, dim=1)
-            encoder_loss = bce_loss(generated_volumes, ground_truth_volumes) * 10
-
+            encoder_loss1 = bce_loss(generated_volumes, ground_truth_volumes) * 10 
+            encoder_loss2 = bce_loss(generated_projections, projections_images) * 10
+            encoder_loss = encoder_loss1 + encoder_loss2
             if cfg.NETWORK.USE_REFINER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER:
                 generated_volumes = refiner(generated_volumes)
                 refiner_loss = bce_loss(generated_volumes, ground_truth_volumes) * 10
