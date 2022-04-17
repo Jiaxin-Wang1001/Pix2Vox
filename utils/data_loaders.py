@@ -97,6 +97,7 @@ class ShapeNetDataLoader:
         self.dataset_taxonomy = None
         self.rendering_image_path_template = cfg.DATASETS.SHAPENET.RENDERING_PATH
         self.volume_path_template = cfg.DATASETS.SHAPENET.VOXEL_PATH
+        self.projection_path_template = cfg.DATASETS.SHAPENET.PROJECTION_PATH
 
         # Load all taxonomies of the dataset
         with open(cfg.DATASETS.SHAPENET.TAXONOMY_FILE_PATH, encoding='utf-8') as file:
@@ -147,10 +148,23 @@ class ShapeNetDataLoader:
 
                 rendering_images_file_path.append(img_file_path)
 
+            projection_file_path = []
+            for i in range(1, 4):
+                projection_path = self.projection_path_template % (taxonomy_folder_name, sample_name, i)
+                if not os.path.exists(projection_path):
+                    continue
+
+                projection_file_path.append(projection_path)
+
             if len(rendering_images_file_path) == 0:
                 print('[WARN] %s Ignore sample %s/%s since image files not exists.' %
                       (dt.now(), taxonomy_folder_name, sample_name))
                 continue
+            if len(projection_file_path) == 0:
+                print('[WARN] %s Ignore sample %s/%s since projection files not exists.' %
+                      (dt.now(), taxonomy_folder_name, sample_name))
+                continue
+
 
             # Append to the list of rendering images
             files_of_taxonomy.append({
@@ -158,6 +172,7 @@ class ShapeNetDataLoader:
                 'sample_name': sample_name,
                 'rendering_images': rendering_images_file_path,
                 'volume': volume_file_path,
+                'projection': projection_file_path,
             })
 
             # Report the progress of reading dataset
