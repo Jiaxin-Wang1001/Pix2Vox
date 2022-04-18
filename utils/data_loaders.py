@@ -93,7 +93,7 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
                 volume = utils.binvox_rw.read_as_3d_array(f)
                 volume = volume.data.astype(np.float32)
 
-        return taxonomy_name, sample_name, np.asarray(rendering_images), volume, projection_images
+        return taxonomy_name, sample_name, np.asarray(rendering_images), volume, np.asarray(projection_images)
 
 
 # //////////////////////////////// = End of ShapeNetDataset Class Definition = ///////////////////////////////// #
