@@ -38,7 +38,6 @@ def get_volume_views(volume):
     volume = volume.squeeze().__ge__(0.5)
     fig = plt.figure()
     ax = fig.gca(projection=Axes3D.name)
-    ax.set_aspect('equal')
     ax.voxels(volume, edgecolor="k")
 
     fig.canvas.draw()
