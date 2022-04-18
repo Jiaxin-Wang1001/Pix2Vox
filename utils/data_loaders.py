@@ -40,12 +40,12 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
         return len(self.file_list)
 
     def __getitem__(self, idx):
-        taxonomy_name, sample_name, rendering_images, volume = self.get_datum(idx)
+        taxonomy_name, sample_name, rendering_images, volume, projections = self.get_datum(idx)
 
         if self.transforms:
             rendering_images = self.transforms(rendering_images)
 
-        return taxonomy_name, sample_name, rendering_images, volume
+        return taxonomy_name, sample_name, rendering_images, volume, projections
 
     def set_n_views_rendering(self, n_views_rendering):
         self.n_views_rendering = n_views_rendering
@@ -55,6 +55,7 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
         sample_name = self.file_list[idx]['sample_name']
         rendering_image_paths = self.file_list[idx]['rendering_images']
         volume_path = self.file_list[idx]['volume']
+        projection_path = self.file_list[idx]['projection']
 
         # Get data of rendering images
         if self.dataset_type == DatasetType.TRAIN:
@@ -75,6 +76,12 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
 
             rendering_images.append(rendering_image)
 
+        # Get data of projection images
+        projection_images = []
+        for image_path in projection_path:
+            projection_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE).astype(np.float32) / 225.
+            projection_images.append(projection_image)
+
         # Get data of volume
         _, suffix = os.path.splitext(volume_path)
 
@@ -86,7 +93,7 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
                 volume = utils.binvox_rw.read_as_3d_array(f)
                 volume = volume.data.astype(np.float32)
 
-        return taxonomy_name, sample_name, np.asarray(rendering_images), volume
+        return taxonomy_name, sample_name, np.asarray(rendering_images), volume, projection_images
 
 
 # //////////////////////////////// = End of ShapeNetDataset Class Definition = ///////////////////////////////// #
