@@ -73,8 +73,8 @@ def train_net(cfg):
     # merger = Merger(cfg)
     print('[DEBUG] %s Parameters in Encoder: %d.' % (dt.now(), utils.network_utils.count_parameters(encoder)))
     print('[DEBUG] %s Parameters in Decoder: %d.' % (dt.now(), utils.network_utils.count_parameters(decoder)))
-    print('[DEBUG] %s Parameters in Refiner: %d.' % (dt.now(), utils.network_utils.count_parameters(refiner)))
-    print('[DEBUG] %s Parameters in Merger: %d.' % (dt.now(), utils.network_utils.count_parameters(merger)))
+    # print('[DEBUG] %s Parameters in Refiner: %d.' % (dt.now(), utils.network_utils.count_parameters(refiner)))
+    # print('[DEBUG] %s Parameters in Merger: %d.' % (dt.now(), utils.network_utils.count_parameters(merger)))
 
     # Initialize weights of networks
     encoder.apply(utils.network_utils.init_weights)
@@ -199,7 +199,7 @@ def train_net(cfg):
             # else:
             #     generated_volumes = torch.mean(generated_volumes, dim=1)
             generated_volumes = torch.mean(generated_volumes, dim=1)
-            
+
             encoder_loss1 = bce_loss(generated_volumes, ground_truth_volumes) * 10 
             encoder_loss2 = bce_loss(generated_projections, projections_images) * 10
             print("+++++++++++++++++++++++++++++++++++++++")
