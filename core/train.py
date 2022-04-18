@@ -194,10 +194,12 @@ def train_net(cfg):
             image_features = encoder(rendering_images)
             raw_features, generated_volumes, generated_projections = decoder(image_features)
 
-            if cfg.NETWORK.USE_MERGER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_MERGER:
-                generated_volumes = merger(raw_features, generated_volumes)
-            else:
-                generated_volumes = torch.mean(generated_volumes, dim=1)
+            # if cfg.NETWORK.USE_MERGER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_MERGER:
+            #     generated_volumes = merger(raw_features, generated_volumes)
+            # else:
+            #     generated_volumes = torch.mean(generated_volumes, dim=1)
+            generated_volumes = torch.mean(generated_volumes, dim=1)
+            
             encoder_loss1 = bce_loss(generated_volumes, ground_truth_volumes) * 10 
             encoder_loss2 = bce_loss(generated_projections, projections_images) * 10
             print("+++++++++++++++++++++++++++++++++++++++")
