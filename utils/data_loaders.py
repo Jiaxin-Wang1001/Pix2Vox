@@ -152,6 +152,7 @@ class ShapeNetDataLoader:
             for i in range(1, 4):
                 projection_path = self.projection_path_template % (taxonomy_folder_name, sample_name, i)
                 if not os.path.exists(projection_path):
+                    print(projection_path)
                     continue
 
                 projection_file_path.append(projection_path)
